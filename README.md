@@ -11,6 +11,10 @@ pattern. Ask things like "find AI healthcare startups in the US with 11-50
 employees" or "enrich stripe.com" or "wire CompanyEnrich search into this app"
 and Claude uses the right endpoint.
 
+It is also credit-aware: Claude counts matches with the free endpoint first,
+tells you the cost, and asks before any large or expensive call - so you do not
+burn credits by accident.
+
 ## Install
 
 Clone this repo straight into your Claude Code skills folder:
@@ -41,28 +45,39 @@ rm -rf ~/.claude/skills/companyenrich
 
 ## Requirements
 
-- A CompanyEnrich API key. Set it as an environment variable in your project:
+A CompanyEnrich API key (get one and check your balance at
+[companyenrich.com](https://companyenrich.com)). The skill resolves it in this
+order, so set it whichever way suits you:
 
-  ```bash
-  COMPANYENRICH_API_KEY=your_key_here
-  ```
+1. `COMPANYENRICH_API_KEY` environment variable (recommended for projects)
+2. `~/.companyenrich/api_key` file
+3. Provide it in chat when Claude asks - it validates and stores it for next time
 
-  The skill never hardcodes the key - it reads it from the environment. Get a key
-  and check your credit balance at [companyenrich.com](https://companyenrich.com).
-
-- Auth on every request: `Authorization: Bearer <COMPANYENRICH_API_KEY>`
-- Base URL: `https://api.companyenrich.com`
+The skill never hardcodes the key or prints it back. Auth on every request:
+`Authorization: Bearer <key>`. Base URL: `https://api.companyenrich.com`.
 
 ## What's inside
 
 | File | Purpose |
 |------|---------|
-| `SKILL.md` | When-to-use, auth, endpoint decision table, search rules, credit costs, REST integration pattern. |
-| `ENDPOINTS.md` | Authoritative catalog of all ~45 endpoints with request fields, costs, and enum values. |
+| `SKILL.md` | When-to-use, API-key handling, credit/spend policy, endpoint decision table, search rules, error handling, rate limits, and a REST integration pattern. |
+| `ENDPOINTS.md` | Authoritative catalog of all ~45 endpoints with request fields, response shapes, costs, and exact enum values. |
 
 Built from the official OpenAPI spec at
 `https://api.companyenrich.com/openapi/v1.json`. If CompanyEnrich changes their
 API, re-fetch that spec to refresh the skill.
+
+## What the skill enforces
+
+- **Spend safety** - counts matches with the free `count` endpoint before paid
+  searches, quotes the cost, and confirms before bulk jobs, exports, or anything
+  over ~25 credits. Keeps `pageSize` to what you actually need.
+- **Correct filters** - exact enum values, ISO-2 country codes, and resolving
+  state/city/region IDs via the free geo endpoints instead of guessing.
+- **Robust error handling** - maps `401/402/404/422/429` to clear actions, with
+  back-off on rate limits.
+- **Clean output** - summarizes the relevant fields instead of dumping raw JSON,
+  and offers to save large result sets to JSON/CSV.
 
 ## Coverage
 
